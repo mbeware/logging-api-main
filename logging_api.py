@@ -1,20 +1,24 @@
 from flask import Flask, jsonify, request
 import sys
 import os
+import argparse
 
-BASE_LOGFOLDER = "log_files"
 app = Flask(__name__)
 
-running_port = sys.argv[1] if len(sys.argv) > 1 else 5000
-output_file = sys.argv[2] if len(sys.argv) > 2 else "log.txt"
-output_file = sys.argv[2] if len(sys.argv) > 2 else "log.txt"
-output_target = os.path.join(BASE_LOGFOLDER ,  output_file)
-if not os.path.exists(BASE_LOGFOLDER):
-    try :
-        os.makedirs(BASE_LOGFOLDER)
-    except Exception as e:
-        print( f"Erreur à la création du répertoire de log {e}")
-        exit(255)
+
+def SetGlobal(args):
+    global running_port
+    global output_file
+    running_port = args.port
+    output_file = args.logfile  
+
+def setup_argparsers():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', type=int, default=5000, help='port number')
+    parser.add_argument('-l','--logfile', type=str, default='/var/log/logging_api.log', help='log file location')
+    parser.set_defaults(func=SetGlobal)
+    return parser
+    
 
 @app.route('/', methods=['POST'])
 def racine_post():
@@ -29,15 +33,19 @@ def racine_post():
     else :
         message = str(request)
     try :
-        with open(output_target, "a+", encoding="utf-8") as out_file:
+        with open(output_file, "a+", encoding="utf-8") as out_file:
                 out_file.write(message + "\n")
     except Exception as e: 
-         return f"Erreur à l'écriture du log {e}"                
+         return f"Erreur à l'écriture du log {output_file} : {e}"                
     
-    return "Information logged"
+    return f"Information logged in {output_file})"
 
 
 if __name__ == '__main__':
+    parser = setup_argparsers()
+    args = parser.parse_args()
+    args.func(args)
+
     app.run(host="0.0.0.0", port=running_port)
 
 
